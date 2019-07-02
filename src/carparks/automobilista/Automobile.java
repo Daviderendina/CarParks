@@ -1,29 +1,24 @@
 package carparks.automobilista;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 public class Automobile {
-	
-	//nomi in inglese
 
 	private String targa;
+	private ArrayList<String> targaList = new ArrayList<String>();
 	
 	public String getTarga() {
 		return this.targa;
 	}
 	
 	public Automobile() {
-		this.targa = generateTarga();
-		
-		//check che la targa non esista già
-		//classe targaGenerator ?
+		this.targa = generaTarga();
 	}
 	
-	private String randomString(int length) {
-		
+	private String randomString(int length) {		
 		String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 		return getRandom(characters, length);
-
 	}
 	
 	private String randomNumbers(int length) {
@@ -44,7 +39,15 @@ public class Automobile {
 		return tempString;
 	}
 	
-	private String generateTarga() {
+	private String generaTarga() {
+		String targaTmp;
+		do {
+			targaTmp = createTarga();
+		}while(targaList.contains(targaTmp));
+		return targaTmp;
+	}
+	
+	private String createTarga() {
 		String tempTarga = "";		
 		
 		tempTarga += randomString(2);

@@ -3,23 +3,40 @@ package carparks.parcheggio;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Random;
 
 import carparks.automobilista.Automobile;
 
 public class Parcheggio {
 
-	//ticket -> posto
 	private HashMap<Integer,PostoAuto> ticketList;
 	private PostoAuto[] postiAuto;
-	//private ArrayList<Parcheggiatore> parcheggiatori;	
 	private int generatoreTicket = 0;
-	
 	private Parcheggiatore[] parcheggiatori;
+	
+	private String nome;
+	private String[] listaNomi = {"Europa","America","Africa","Asia","Oceania"};
+	private static HashMap <String, Integer> generatoreNomi = new HashMap<String, Integer>();
+	private HashMap <Integer, Automobile> autoInConsegna = new HashMap <Integer, Automobile>();
 	
 	public Parcheggio(int numeroPosti, int numeroParcheggiatori) {		
 		ticketList = new HashMap<Integer, PostoAuto>();
 		setPosti(numeroPosti);
 		setParcheggiatori(numeroParcheggiatori);
+		this.nome = generaNome();
+	}
+	private String generaNome(){
+		String tmpNome = listaNomi[new Random().nextInt(listaNomi.length)];
+		if(generatoreNomi.containsKey(tmpNome)) {
+			generatoreNomi.put(tmpNome, ((int) generatoreNomi.get(tmpNome))+1);
+			return tmpNome + generatoreNomi.get(tmpNome);
+		}
+		else
+		{
+			generatoreNomi.put(tmpNome, 0);
+			return tmpNome;
+		}
+		
 	}
 	
 	private void setPosti(int numeroPosti) {
@@ -30,19 +47,15 @@ public class Parcheggio {
 	
 	private void setParcheggiatori(int numero) {
 		parcheggiatori = new Parcheggiatore[numero];
-		//for(int i=0; i<numero; i++)
-			//parcheggiatori[i] = new Parcheggiatore(this);
 	}
 
 	public boolean hasPostoLibero() {
-		//Se ci sono tanti ticket assegnati quanti posti auto il parcheggio è pieno
 		return (ticketList.size() < postiAuto.length);
 	}
 	
 	public boolean isParcheggiatoreLibero() {
 		boolean libero = true;
 		for(Parcheggiatore p: parcheggiatori) {
-			//Se p == null significa che lo slot è vuoto e quindi il parcheggiatore è disponibile
 			if(p != null)
 				libero = libero && p.isAlive();
 			else
@@ -52,51 +65,39 @@ public class Parcheggio {
 	}
 	
 	private int emettiTicket() {
-		//controllo overflow
 		generatoreTicket++;
 		return generatoreTicket;
 	}
 	
 	public synchronized int parcheggia(Automobile auto) {
-		//aspetta fino a quando non ci sono un posto e un parcheggiatore libero
 		while(!(hasPostoLibero() && isParcheggiatoreLibero())) {
 			try {
-				System.out.println("Automobile "+auto.getTarga()+" in attesa di essere parcheggiata");
-				wait();
+				this.wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
 
-		//genera il ticket
 		int ticket = emettiTicket();
 
-		//chiede a un parcheggiatore di parcheggiare l'auto
 		Parcheggiatore p = getParcheggiatoreLibero();
 
-		//System.out.println("Parcheggiatore: " + (p == null));
 		p.setParcheggia(ticket, auto);
 		p.start();
-		//notifica agli altri
-		notifyAll();
 		return ticket;
 	}
-	
-	public synchronized Automobile ritira(int ticket) {		
+		
+	public synchronized void ritira(int ticket) {	
 		while(!isParcheggiatoreLibero()) {
 			try {
-				wait();
+				this.wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		//tempo di attesa
-		//Deve tornare automobile all'automobilista
 		Parcheggiatore p = getParcheggiatoreLibero();
 		p.setRitira(ticket);
 		p.start();
-		//come viene ritornata l'auto?
-		return new Automobile();		
 	}
 	
 	public HashMap<Integer, PostoAuto> getTicketList() {
@@ -111,21 +112,40 @@ public class Parcheggio {
 		return ticketList.get(ticket);
 	}
 	
+	
 	public void removePosto(int ticket) {
-		ticketList.remove(ticket);
+		ticketList.remove(ticket);		
 	}
-
+	
 	public PostoAuto[] getPosti() {
 		return this.postiAuto;
 	}
 	
 	private Parcheggiatore getParcheggiatoreLibero() {
-		for(Parcheggiatore p : parcheggiatori) {
-			if(p==null || !p.isAlive()) {
-				p = new Parcheggiatore(this);
-				return p;
+		for(int i=0;i<parcheggiatori.length;i++) {
+			if(parcheggiatori[i]==null || !parcheggiatori[i].isAlive()) {
+				parcheggiatori[i] = new Parcheggiatore(this);
+				return parcheggiatori[i];
 			}
 		}
 		return null;		
 	}
+	
+	public String getNome() {
+		return this.nome;
+	}
+	
+	public Automobile ritiraAutoInConsegna(int ticket) {
+		if(autoInConsegna.containsKey(ticket)) {
+			Automobile tmp = autoInConsegna.get(ticket);
+			autoInConsegna.remove(ticket);
+			return tmp;
+		}
+		return null;
+	}
+	
+	public void nuovaAutoInConsegna(int ticket, Automobile auto) {
+		this.autoInConsegna.put(ticket, auto);
+	}
+
 }
